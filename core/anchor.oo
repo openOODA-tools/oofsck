@@ -1,0 +1,54 @@
+// # Core Subsystem Anchor
+//
+// Logline: Unified re-export and self-test harness for oofsck core filesystem checking engine.
+//
+// Setup: Exports filesystem types, ext4 parser, alternative superblocks, and inode auditor.
+//
+// Beats:
+//   1. Re-export filesystem data structures.
+//   2. Re-export ext4 superblock parsing engine.
+//   3. Re-export alternative filesystem signature detectors.
+//   4. Execute unit verification assertions covering core filesystem checks.
+
+import "core/fs_types.oo";
+import "core/ext4_superblock.oo";
+import "core/alt_superblocks.oo";
+import "core/inode_auditor.oo";
+
+pub fn run_core_tests() -> Bool {
+    let mut ok: Bool = true;
+
+    // Test 1: Signature detection
+    let mut buf: String = "";
+    let mut i: Int = 0;
+    while i < 1100 {
+        buf = buf + " ";
+        i = i + 1;
+    }
+    // Set ext4 magic at 1080
+    let mut ext4_buf: String = str_slice(buf, 0, 1080)
+        + bytes_to_str(bytes_push(bytes_push(bytes_new(), 83), 239))
+        + str_slice(buf, 1082, 1100);
+
+    let sig: String = detect_fs_signature(ext4_buf);
+    if sig != "ext4" {
+        ok = false;
+    }
+
+    // Test 2: Inode auditor
+    if !run_auditor_tests() {
+        ok = false;
+    }
+
+    // Test 3: XFS and Btrfs mock superblocks
+    let xfs: SuperblockInfo = create_mock_xfs_superblock();
+    if xfs.fs_type != "xfs" {
+        ok = false;
+    }
+    let btrfs: SuperblockInfo = create_mock_btrfs_superblock();
+    if btrfs.fs_type != "btrfs" {
+        ok = false;
+    }
+
+    return ok;
+}

@@ -1,9 +1,9 @@
 # Maintainer: openOODA-tools <ops@openooda.org>
 pkgname=oofsck-bin
 _pkgname=oofsck
-pkgver=0.1.0
+pkgver=0.2.0
 pkgrel=1
-pkgdesc="Filesystem consistency verifier checking superblock blocks and inode checksums."
+pkgdesc="Sovereign filesystem consistency verifier and superblock/inode integrity auditor in pure openOODA."
 arch=('x86_64')
 url="https://github.com/openOODA-tools/oofsck"
 license=('Apache-2.0')

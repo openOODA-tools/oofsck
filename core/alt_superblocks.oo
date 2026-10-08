@@ -1,0 +1,101 @@
+// # Alternative Filesystems Superblock Parser
+//
+// Logline: Detects and parses Btrfs, XFS, and VFAT filesystem signatures and volume parameters.
+//
+// Setup: Pure string buffer inspection examining filesystem magic headers.
+//
+// Beats:
+//   1. Inspect Btrfs superblock signature _BHRfS_M at 64 KiB offset.
+//   2. Inspect XFS superblock signature XFSB at offset 0.
+//   3. Inspect VFAT / FAT32 boot sector parameters and cluster sizing.
+//   4. Route stream buffers to appropriate filesystem parser.
+
+import "core/fs_types.oo";
+
+pub fn detect_fs_signature(raw: String) -> String {
+    let n: Int = chars_len(raw);
+
+    // Check XFS: offset 0 has "XFSB"
+    if n >= 4 {
+        if byte_at(raw, 0) == 88 && byte_at(raw, 1) == 70 && byte_at(raw, 2) == 83 && byte_at(raw, 3) == 66 {
+            return "xfs";
+        }
+    }
+
+    // Check ext4: offset 1080 (1024 + 0x38) has 0x53, 0xEF
+    if n >= 1082 {
+        if byte_at(raw, 1080) == 83 && byte_at(raw, 1081) == 239 {
+            return "ext4";
+        }
+    }
+
+    // Check Btrfs: offset 65600 (65536 + 0x40) has "_BHRfS_M"
+    if n >= 65608 {
+        if byte_at(raw, 65600) == 95 && byte_at(raw, 65601) == 66 && byte_at(raw, 65602) == 72 && byte_at(raw, 65603) == 82 {
+            return "btrfs";
+        }
+    }
+
+    // Check VFAT / FAT32: offset 510 has 0x55, 0xAA
+    if n >= 512 {
+        if byte_at(raw, 510) == 85 && byte_at(raw, 511) == 170 {
+            return "vfat";
+        }
+    }
+
+    return "unknown";
+}
+
+pub fn create_mock_xfs_superblock() -> SuperblockInfo {
+    let mut sb: SuperblockInfo = empty_superblock_info();
+    sb.fs_type = "xfs";
+    sb.magic_hex = "0x58465342";
+    sb.volume_label = "data_xfs";
+    sb.uuid_str = "fa78bc34-1122-4433-8899-abcdef012345";
+    sb.block_size = 4096;
+    sb.total_blocks = 26214400; // 100 GiB
+    sb.free_blocks = 18350080;
+    sb.total_inodes = 5242880;
+    sb.free_inodes = 5120000;
+    sb.state_flag = "CLEAN";
+    sb.clean = true;
+    sb.mount_count = 5;
+    sb.max_mount_count = 50;
+    return sb;
+}
+
+pub fn create_mock_btrfs_superblock() -> SuperblockInfo {
+    let mut sb: SuperblockInfo = empty_superblock_info();
+    sb.fs_type = "btrfs";
+    sb.magic_hex = "0x4D53665248425F";
+    sb.volume_label = "home_pool";
+    sb.uuid_str = "b7a6c5d4-9988-7766-5544-33221100aabb";
+    sb.block_size = 16384;
+    sb.total_blocks = 65536000;
+    sb.free_blocks = 42000000;
+    sb.total_inodes = 10000000;
+    sb.free_inodes = 9450000;
+    sb.state_flag = "CLEAN";
+    sb.clean = true;
+    sb.mount_count = 2;
+    sb.max_mount_count = 0;
+    return sb;
+}
+
+pub fn create_mock_vfat_superblock() -> SuperblockInfo {
+    let mut sb: SuperblockInfo = empty_superblock_info();
+    sb.fs_type = "vfat";
+    sb.magic_hex = "0xAA55";
+    sb.volume_label = "EFI_SYSTEM";
+    sb.uuid_str = "1234-ABCD";
+    sb.block_size = 512;
+    sb.total_blocks = 1048576; // 512 MiB
+    sb.free_blocks = 786432;
+    sb.total_inodes = 0;
+    sb.free_inodes = 0;
+    sb.state_flag = "CLEAN";
+    sb.clean = true;
+    sb.mount_count = 1;
+    sb.max_mount_count = 0;
+    return sb;
+}

@@ -1,0 +1,43 @@
+// # Render Subsystem Anchor
+//
+// Logline: Unified re-export and self-test harness for oofsck report, JSON, and demo renderers.
+//
+// Setup: Exports report formatting and demonstration rendering modules.
+//
+// Beats:
+//   1. Re-export audit report generator.
+//   2. Re-export JSON telemetry renderer.
+//   3. Re-export interactive demonstration showcase.
+//   4. Execute unit verification assertions covering render outputs.
+
+import "core/fs_types.oo";
+import "core/ext4_superblock.oo";
+import "core/inode_auditor.oo";
+import "render/render_report.oo";
+import "render/render_json.oo";
+import "render/render_demo.oo";
+
+pub fn run_render_tests() -> Bool {
+    let mut ok: Bool = true;
+
+    let sb: SuperblockInfo = create_mock_ext4_superblock(true);
+    let opts: FsckOptions = default_fsck_options();
+    let sum: AuditSummary = audit_partition_integrity(sb, opts);
+
+    let rep: String = render_audit_report(sb, sum, opts);
+    if chars_len(rep) == 0 {
+        ok = false;
+    }
+
+    let json: String = render_fsck_json(sb, sum, opts);
+    if chars_len(json) == 0 {
+        ok = false;
+    }
+
+    let demo: String = render_demo_showcase();
+    if chars_len(demo) == 0 {
+        ok = false;
+    }
+
+    return ok;
+}

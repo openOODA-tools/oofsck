@@ -1,0 +1,144 @@
+// # Ext4 Superblock Parsing Subsystem
+//
+// Logline: Ingests ext4 superblock binary buffers and verifies magic 0xEF53 and volume metadata.
+//
+// Setup: Pure algorithmic parser reading little-endian fields and state flags.
+//
+// Beats:
+//   1. Inspect byte stream at offset 1024 for superblock layout.
+//   2. Validate ext4 filesystem signature 0xEF53 (0x53, 0xEF).
+//   3. Extract block counts, free counts, mount counters, and volume UUID.
+//   4. Evaluate clean versus dirty/error state flags.
+
+import "core/fs_types.oo";
+
+fn parse_le16(raw: String, off: Int) -> Int {
+    let n: Int = chars_len(raw);
+    if off + 1 >= n {
+        return 0;
+    }
+    let b0: Int = byte_at(raw, off);
+    let b1: Int = byte_at(raw, off + 1);
+    return b0 + (b1 * 256);
+}
+
+fn parse_le32(raw: String, off: Int) -> Int {
+    let n: Int = chars_len(raw);
+    if off + 3 >= n {
+        return 0;
+    }
+    let b0: Int = byte_at(raw, off);
+    let b1: Int = byte_at(raw, off + 1);
+    let b2: Int = byte_at(raw, off + 2);
+    let b3: Int = byte_at(raw, off + 3);
+    return b0 + (b1 * 256) + (b2 * 65536) + (b3 * 16777216);
+}
+
+fn hex_nibble(n: Int) -> String {
+    let v: Int = n % 16;
+    if v < 10 {
+        return v.to_string();
+    }
+    if v == 10 { return "a"; }
+    if v == 11 { return "b"; }
+    if v == 12 { return "c"; }
+    if v == 13 { return "d"; }
+    if v == 14 { return "e"; }
+    return "f";
+}
+
+fn byte_to_hex(b: Int) -> String {
+    return hex_nibble(b / 16) + hex_nibble(b % 16);
+}
+
+pub fn parse_ext4_superblock_buffer(raw: String) -> SuperblockInfo {
+    let mut sb: SuperblockInfo = empty_superblock_info();
+    let n: Int = chars_len(raw);
+
+    // Primary superblock starts at offset 1024
+    let sb_off: Int = if n >= 2048 { 1024 } else { 0 };
+    if n < sb_off + 128 {
+        return sb;
+    }
+
+    let magic: Int = parse_le16(raw, sb_off + 56); // 0x38 = 56
+    if magic != 61267 { // 0xEF53 = 61267
+        return sb;
+    }
+
+    sb.fs_type = "ext4";
+    sb.magic_hex = "0xEF53";
+
+    let total_inodes: Int = parse_le32(raw, sb_off + 0);
+    let total_blocks: Int = parse_le32(raw, sb_off + 4);
+    let free_blocks: Int = parse_le32(raw, sb_off + 12);
+    let free_inodes: Int = parse_le32(raw, sb_off + 16);
+
+    let log_block_size: Int = parse_le32(raw, sb_off + 24);
+    let mut block_size: Int = 1024;
+    let mut shift: Int = 0;
+    while shift < log_block_size && shift < 6 {
+        block_size = block_size * 2;
+        shift = shift + 1;
+    }
+
+    let mount_count: Int = parse_le16(raw, sb_off + 52);
+    let max_mount_count: Int = parse_le16(raw, sb_off + 54);
+    let state_val: Int = parse_le16(raw, sb_off + 58);
+
+    sb.total_inodes = if total_inodes > 0 { total_inodes } else { 65536 };
+    sb.total_blocks = if total_blocks > 0 { total_blocks } else { 262144 };
+    sb.free_blocks = free_blocks;
+    sb.free_inodes = free_inodes;
+    sb.block_size = block_size;
+    sb.mount_count = mount_count;
+    sb.max_mount_count = max_mount_count;
+
+    if state_val == 1 {
+        sb.state_flag = "CLEAN";
+        sb.clean = true;
+    } else {
+        sb.state_flag = "DIRTY/NEEDS_RECOVERY";
+        sb.clean = false;
+    }
+
+    // Extract UUID (offset 104 in superblock = 0x68)
+    let uuid_off: Int = sb_off + 104;
+    if n >= uuid_off + 16 {
+        let mut uuid_str: String = "";
+        let mut i: Int = 0;
+        while i < 16 {
+            uuid_str = uuid_str + byte_to_hex(byte_at(raw, uuid_off + i));
+            if i == 3 || i == 5 || i == 7 || i == 9 {
+                uuid_str = uuid_str + "-";
+            }
+            i = i + 1;
+        }
+        sb.uuid_str = uuid_str;
+    }
+
+    return sb;
+}
+
+pub fn create_mock_ext4_superblock(clean_state: Bool) -> SuperblockInfo {
+    let mut sb: SuperblockInfo = empty_superblock_info();
+    sb.fs_type = "ext4";
+    sb.magic_hex = "0xEF53";
+    sb.volume_label = "rootfs";
+    sb.uuid_str = "e2b3c4d5-6789-40ab-8cde-123456789abc";
+    sb.block_size = 4096;
+    sb.total_blocks = 13107200; // 50 GiB
+    sb.free_blocks = 8519680;   // ~32 GiB free
+    sb.total_inodes = 3276800;
+    sb.free_inodes = 2894100;
+    sb.mount_count = 14;
+    sb.max_mount_count = 30;
+    if clean_state {
+        sb.state_flag = "CLEAN";
+        sb.clean = true;
+    } else {
+        sb.state_flag = "DIRTY/NEEDS_RECOVERY";
+        sb.clean = false;
+    }
+    return sb;
+}

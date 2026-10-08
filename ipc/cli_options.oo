@@ -1,0 +1,47 @@
+// # Command Line Option Parser
+//
+// Logline: Ingests POSIX command line arguments and populates fsck audit configuration.
+//
+// Setup: Pure argument scanning without system calls or ambient environment access.
+//
+// Beats:
+//   1. Traverse argument list extracting short and long POSIX flags.
+//   2. Configure non-destructive read-only, force, and preen modes.
+//   3. Toggle verbose reporting and JSON telemetry output.
+//   4. Capture target partition or image device path.
+
+import "core/fs_types.oo";
+
+pub fn parse_cli_args(args: List[String]) -> FsckOptions {
+    let mut opts: FsckOptions = default_fsck_options();
+    let num_args: Int = list_len(args);
+    let mut i: Int = 0;
+
+    while i < num_args {
+        let arg: String = list_get(args, i);
+
+        if arg == "-h" || arg == "--help" {
+            opts.help = true;
+        } else if arg == "--version" {
+            opts.version = true;
+        } else if arg == "-n" || arg == "--read-only" {
+            opts.read_only = true;
+        } else if arg == "-f" || arg == "--force" {
+            opts.force = true;
+        } else if arg == "-v" || arg == "-V" || arg == "--verbose" {
+            opts.verbose = true;
+        } else if arg == "-p" || arg == "-a" || arg == "--preen" {
+            opts.preen = true;
+        } else if arg == "-j" || arg == "--json" {
+            opts.json_mode = true;
+        } else if arg == "-D" || arg == "--demo" {
+            opts.demo = true;
+        } else if !str_starts_with(arg, "-") && chars_len(opts.device_path) == 0 {
+            opts.device_path = arg;
+        }
+
+        i = i + 1;
+    }
+
+    return opts;
+}

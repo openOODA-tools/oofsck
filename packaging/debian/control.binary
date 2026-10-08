@@ -1,0 +1,10 @@
+Package: oofsck
+Version: 0.2.0-1
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: openOODA-tools <ops@openooda.org>
+Description: FS INTEGRITY
+ Sovereign filesystem consistency verifier and superblock/inode integrity auditor in pure openOODA.
+ Capability-bounded openOODA utility with zero ambient authority,
+ multi-filesystem superblock auditing, and native Model Context Protocol (MCP) surface.

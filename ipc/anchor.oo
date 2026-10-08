@@ -1,0 +1,65 @@
+// # IPC Subsystem Anchor
+//
+// Logline: Unified re-export and self-test harness for oofsck command-line options and MCP server.
+//
+// Setup: Exports CLI option parsing, JSON field extraction, and MCP protocol server.
+//
+// Beats:
+//   1. Re-export JSON field extraction primitives.
+//   2. Re-export POSIX command-line option parser.
+//   3. Re-export Model Context Protocol stdio server.
+//   4. Execute unit verification assertions covering CLI and MCP operations.
+
+import "core/fs_types.oo";
+import "ipc/json_field.oo";
+import "ipc/cli_options.oo";
+import "ipc/mcp_server.oo";
+
+pub fn run_ipc_tests() -> Bool {
+    let mut ok: Bool = true;
+
+    // Test JSON field extractor
+    let sample: String = "{\"id\":10,\"method\":\"tools/call\",\"name\":\"fsck_check_integrity\",\"device\":\"/dev/sda1\"}";
+    let id_val: Int = json_extract_int_field(sample, "id", 0);
+    if id_val != 10 {
+        ok = false;
+    }
+    let dev: String = json_extract_str_field(sample, "device");
+    if dev != "/dev/sda1" {
+        ok = false;
+    }
+
+    // Test CLI argument parser
+    let mut args: List[String] = list_new();
+    args = list_push(args, "-n");
+    args = list_push(args, "-f");
+    args = list_push(args, "-v");
+    args = list_push(args, "/dev/nvme0n1p2");
+    let opts: FsckOptions = parse_cli_args(args);
+    if !opts.read_only {
+        ok = false;
+    }
+    if !opts.force {
+        ok = false;
+    }
+    if !opts.verbose {
+        ok = false;
+    }
+    if opts.device_path != "/dev/nvme0n1p2" {
+        ok = false;
+    }
+
+    // Test MCP init render
+    let init_resp: String = render_mcp_init("1");
+    if chars_len(init_resp) == 0 {
+        ok = false;
+    }
+
+    // Test MCP tools list render
+    let list_resp: String = render_mcp_tools_list("2");
+    if chars_len(list_resp) == 0 {
+        ok = false;
+    }
+
+    return ok;
+}

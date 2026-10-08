@@ -1,0 +1,51 @@
+// # Filesystem Integrity Demonstration Showcase
+//
+// Logline: Formats multi-filesystem consistency scenarios demonstrating ext4, btrfs, and xfs checks.
+//
+// Setup: Composes audit reports and status assessments across synthetic volume fixtures.
+//
+// Beats:
+//   1. Build clean ext4 system partition audit scenario.
+//   2. Build corrupted/dirty ext4 partition scenario.
+//   3. Build Btrfs copy-on-write subvolume pool audit scenario.
+//   4. Package into styled terminal showcase banner.
+
+import "core/fs_types.oo";
+import "core/ext4_superblock.oo";
+import "core/alt_superblocks.oo";
+import "core/inode_auditor.oo";
+import "render/render_report.oo";
+
+pub fn render_demo_showcase() -> String {
+    let mut out: String = "======================================================================\n"
+        + "       oofsck: Sovereign Filesystem Integrity Showcase\n"
+        + "======================================================================\n\n";
+
+    // Scenario 1: Clean ext4 root volume
+    out = out + "[SCENARIO 1: Clean ext4 System Volume Audit (/dev/nvme0n1p2)]\n";
+    let sb1: SuperblockInfo = create_mock_ext4_superblock(true);
+    let mut opts1: FsckOptions = default_fsck_options();
+    opts1.device_path = "/dev/nvme0n1p2";
+    opts1.verbose = true;
+    let sum1: AuditSummary = audit_partition_integrity(sb1, opts1);
+    out = out + render_audit_report(sb1, sum1, opts1) + "\n";
+
+    // Scenario 2: Dirty ext4 partition
+    out = out + "[SCENARIO 2: Dirty ext4 Data Partition (/dev/sdb1)]\n";
+    let sb2: SuperblockInfo = create_mock_ext4_superblock(false);
+    let mut opts2: FsckOptions = default_fsck_options();
+    opts2.device_path = "/dev/sdb1";
+    let sum2: AuditSummary = audit_partition_integrity(sb2, opts2);
+    out = out + render_audit_report(sb2, sum2, opts2) + "\n";
+
+    // Scenario 3: Btrfs Subvolume Pool
+    out = out + "[SCENARIO 3: Btrfs Copy-on-Write Volume Audit (/dev/sdc)]\n";
+    let sb3: SuperblockInfo = create_mock_btrfs_superblock();
+    let mut opts3: FsckOptions = default_fsck_options();
+    opts3.device_path = "/dev/sdc";
+    let sum3: AuditSummary = audit_partition_integrity(sb3, opts3);
+    out = out + render_audit_report(sb3, sum3, opts3) + "\n";
+
+    out = out + "======================================================================\n";
+    return out;
+}

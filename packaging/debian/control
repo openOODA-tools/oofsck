@@ -9,6 +9,6 @@ Package: oofsck
 Architecture: amd64
 Depends: libc6
 Description: FS INTEGRITY
- Filesystem consistency verifier checking superblock blocks and inode checksums.
+ Sovereign filesystem consistency verifier and superblock/inode integrity auditor in pure openOODA.
  Capability-bounded openOODA utility with zero ambient authority,
- oote theme palettes, and native Model Context Protocol (MCP) surface.
+ multi-filesystem superblock auditing, and native Model Context Protocol (MCP) surface.

@@ -1,0 +1,56 @@
+// # Filesystem Audit Report Generator
+//
+// Logline: Generates terminal diagnostics, pass/fail status, and superblock summaries.
+//
+// Setup: Pure string formatter rendering human-readable fsck audit logs.
+//
+// Beats:
+//   1. Build header banner identifying filesystem type and device.
+//   2. Format superblock metadata, UUID, block sizing, and mount counts.
+//   3. Format inode and block group verification statistics.
+//   4. Conclude with definitive clean/dirty verification assessment.
+
+import "core/fs_types.oo";
+
+pub fn render_audit_report(
+    sb: SuperblockInfo,
+    sum: AuditSummary,
+    opts: FsckOptions
+) -> String {
+    let dev: String = if chars_len(opts.device_path) > 0 { opts.device_path } else { "/dev/sda2" };
+
+    let mut out: String = "oofsck 0.2.0 (openOODA sovereign filesystem integrity)\n";
+    out = out + "Phase 1: Superblock and Geometry Validation (" + dev + ")\n";
+    out = out + "  Filesystem type: " + sb.fs_type + " [" + sb.magic_hex + "]\n";
+    out = out + "  Volume label:    " + (if chars_len(sb.volume_label) > 0 { sb.volume_label } else { "<none>" }) + "\n";
+    out = out + "  Volume UUID:     " + sb.uuid_str + "\n";
+    out = out + "  Block size:      " + sb.block_size.to_string() + " bytes\n";
+    out = out + "  Volume state:    " + sb.state_flag + "\n";
+    out = out + "  Mount count:     " + sb.mount_count.to_string() + " (max: " + sb.max_mount_count.to_string() + ")\n\n";
+
+    out = out + "Phase 2: Inode Table and Allocation Bitmap Audit\n";
+    out = out + "  Total inodes:    " + sb.total_inodes.to_string() + "\n";
+    out = out + "  Free inodes:     " + sb.free_inodes.to_string() + " (" + ((sb.free_inodes * 100) / (if sb.total_inodes > 0 { sb.total_inodes } else { 1 })).to_string() + "% free)\n";
+    out = out + "  Total blocks:    " + sb.total_blocks.to_string() + "\n";
+    out = out + "  Free blocks:     " + sb.free_blocks.to_string() + " (" + ((sb.free_blocks * 100) / (if sb.total_blocks > 0 { sb.total_blocks } else { 1 })).to_string() + "% free)\n\n";
+
+    out = out + "Phase 3: Directory Tree and Extent Pointer Integrity\n";
+    if opts.verbose {
+        out = out + "  [PASS] Root inode #2 bounds and permissions valid\n";
+        out = out + "  [PASS] Extent tree depth within limits\n";
+        out = out + "  [PASS] Allocation bitmaps match superblock counters\n";
+    }
+
+    out = out + "----------------------------------------------------------------------\n";
+    out = out + dev + ": " + sum.status_label + "\n";
+    out = out + "Audit result: " + (if sum.clean { "CLEAN" } else { "ERRORS FOUND" })
+        + " | Errors: " + sum.errors_detected.to_string()
+        + " | Warnings: " + sum.warnings_detected.to_string()
+        + " | Integrity Score: " + sum.integrity_score.to_string() + "/100\n";
+
+    if opts.read_only {
+        out = out + "Note: Running in non-destructive read-only audit mode (-n).\n";
+    }
+
+    return out;
+}

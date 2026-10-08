@@ -1,0 +1,49 @@
+// # JSON Filesystem Telemetry Renderer
+//
+// Logline: Serializes superblock metrics, inode statistics, and audit results to JSON.
+//
+// Setup: Pure string template serialization without external dependencies.
+//
+// Beats:
+//   1. Serialize superblock geometry, UUID, and magic signature.
+//   2. Serialize block and inode allocation metrics.
+//   3. Serialize audit health score, error count, and clean state.
+//   4. Package into machine-readable JSON structure.
+
+import "core/fs_types.oo";
+
+pub fn render_fsck_json(
+    sb: SuperblockInfo,
+    sum: AuditSummary,
+    opts: FsckOptions
+) -> String {
+    let dev: String = if chars_len(opts.device_path) > 0 { opts.device_path } else { "/dev/sda2" };
+
+    let mut out: String = "{\n";
+    out = out + "  \"device\": \"" + dev + "\",\n";
+    out = out + "  \"filesystem\": {\n";
+    out = out + "    \"type\": \"" + sb.fs_type + "\",\n";
+    out = out + "    \"magic\": \"" + sb.magic_hex + "\",\n";
+    out = out + "    \"label\": \"" + sb.volume_label + "\",\n";
+    out = out + "    \"uuid\": \"" + sb.uuid_str + "\",\n";
+    out = out + "    \"block_size\": " + sb.block_size.to_string() + ",\n";
+    out = out + "    \"total_blocks\": " + sb.total_blocks.to_string() + ",\n";
+    out = out + "    \"free_blocks\": " + sb.free_blocks.to_string() + ",\n";
+    out = out + "    \"total_inodes\": " + sb.total_inodes.to_string() + ",\n";
+    out = out + "    \"free_inodes\": " + sb.free_inodes.to_string() + ",\n";
+    out = out + "    \"state\": \"" + sb.state_flag + "\",\n";
+    out = out + "    \"mount_count\": " + sb.mount_count.to_string() + ",\n";
+    out = out + "    \"max_mount_count\": " + sb.max_mount_count.to_string() + "\n";
+    out = out + "  },\n";
+    out = out + "  \"audit\": {\n";
+    out = out + "    \"clean\": " + (if sum.clean { "true" } else { "false" }) + ",\n";
+    out = out + "    \"status\": \"" + sum.status_label + "\",\n";
+    out = out + "    \"errors_detected\": " + sum.errors_detected.to_string() + ",\n";
+    out = out + "    \"warnings_detected\": " + sum.warnings_detected.to_string() + ",\n";
+    out = out + "    \"blocks_checked\": " + sum.blocks_checked.to_string() + ",\n";
+    out = out + "    \"inodes_checked\": " + sum.inodes_checked.to_string() + ",\n";
+    out = out + "    \"integrity_score\": " + sum.integrity_score.to_string() + "\n";
+    out = out + "  }\n";
+    out = out + "}\n";
+    return out;
+}

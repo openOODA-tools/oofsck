@@ -1,0 +1,106 @@
+// # Filesystem Types and Structures Specification
+//
+// Logline: Strongly typed representations for superblocks, inode descriptors, and audit options.
+//
+// Setup: Pure value type definitions without system dependencies or ambient side-effects.
+//
+// Beats:
+//   1. Define SuperblockInfo capturing volume metadata, magic, and block metrics.
+//   2. Define InodeAuditRecord tracking inode allocation, extent pointers, and bounds.
+//   3. Define FsckOptions capturing non-destructive flags (-n, -f, -v, -p).
+//   4. Define AuditSummary aggregating passed checks, warnings, and error counts.
+
+pub type SuperblockInfo = struct {
+    fs_type: String,
+    magic_hex: String,
+    volume_label: String,
+    uuid_str: String,
+    block_size: Int,
+    total_blocks: Int,
+    free_blocks: Int,
+    total_inodes: Int,
+    free_inodes: Int,
+    state_flag: String,
+    clean: Bool,
+    mount_count: Int,
+    max_mount_count: Int
+};
+
+pub type InodeAuditRecord = struct {
+    inode_number: Int,
+    allocated: Bool,
+    mode: Int,
+    size_bytes: Int,
+    block_count: Int,
+    extents_valid: Bool,
+    checksum_valid: Bool,
+    status: String
+};
+
+pub type FsckOptions = struct {
+    read_only: Bool,
+    force: Bool,
+    verbose: Bool,
+    preen: Bool,
+    json_mode: Bool,
+    demo: Bool,
+    help: Bool,
+    version: Bool,
+    device_path: String
+};
+
+pub type AuditSummary = struct {
+    fs_type: String,
+    clean: Bool,
+    errors_detected: Int,
+    warnings_detected: Int,
+    blocks_checked: Int,
+    inodes_checked: Int,
+    integrity_score: Int,
+    status_label: String
+};
+
+pub fn default_fsck_options() -> FsckOptions {
+    return FsckOptions {
+        read_only: true,
+        force: false,
+        verbose: false,
+        preen: false,
+        json_mode: false,
+        demo: false,
+        help: false,
+        version: false,
+        device_path: ""
+    };
+}
+
+pub fn empty_superblock_info() -> SuperblockInfo {
+    return SuperblockInfo {
+        fs_type: "unknown",
+        magic_hex: "0x0000",
+        volume_label: "",
+        uuid_str: "",
+        block_size: 4096,
+        total_blocks: 0,
+        free_blocks: 0,
+        total_inodes: 0,
+        free_inodes: 0,
+        state_flag: "UNKNOWN",
+        clean: false,
+        mount_count: 0,
+        max_mount_count: 0
+    };
+}
+
+pub fn empty_audit_summary() -> AuditSummary {
+    return AuditSummary {
+        fs_type: "unknown",
+        clean: true,
+        errors_detected: 0,
+        warnings_detected: 0,
+        blocks_checked: 0,
+        inodes_checked: 0,
+        integrity_score: 100,
+        status_label: "PASSED"
+    };
+}
